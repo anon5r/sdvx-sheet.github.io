@@ -1,10 +1,13 @@
 ﻿bpm = 0;
 snd = null;
-context = new AudioContext();
+// context = new AudioContext();
+context = null;
 startOffset = 0;
 startTime = 0;
 source = null;
 request = null;
+
+gain_node = null;
 
 speed = 1.0;
 currentTime = 0;
@@ -108,6 +111,8 @@ function source_onended() {
         startOffset = (snd.duration - 0.1) / music_speed;
         $("#play").removeAttr("disabled");
         $("#load").removeAttr("disabled");
+        $("#bpm_times_speed").removeAttr("disabled");
+        $("#speed").removeAttr("disabled");
     }
 }
 
@@ -127,6 +132,8 @@ function stopping(event) {
 
     $("#play").removeAttr("disabled");
     $("#load").removeAttr("disabled");
+    $("#bpm_times_speed").removeAttr("disabled");
+    $("#speed").removeAttr("disabled");
 
     $("#time").val(((window.startOffset * music_speed) % snd.duration).toFixed(4));
 }
@@ -138,15 +145,21 @@ function playing(event) {
     window.source = context.createBufferSource();
     window.source.buffer = snd;
     window.source.loop = false;
-    window.source.connect(context.destination);
+    window.gain_node = context.createGain();
+    window.source.connect(window.gain_node);
+    window.gain_node.connect(context.destination);
+    // window.source.connect(context.destination);
     window.source.isPlaying = true;
     window.source.onended = source_onended;
     window.source.playbackRate.value = music_speed;
-    window.source.start(0, ((startOffset * music_speed) % snd.duration));
+    dragVolBar();
+    window.source.start(0, ((startOffset * music_speed + (+$("#shift").val())) % snd.duration));
 
     moving();
     $("#play").attr("disabled", "true");
     $("#load").attr("disabled", "true");
+    $("#bpm_times_speed").attr("disabled", "true");
+    $("#speed").attr("disabled", "true");
     $("#stop").removeAttr("disabled");
 
     if (window.update_time_timer != null)
@@ -342,7 +355,7 @@ function loading(event) {
         if (evt.lengthComputable) { //evt.loaded the bytes browser receive
             //evt.total the total bytes seted by the header
             var percentComplete = (evt.loaded / evt.total) * 100;
-            $("#load_progress").val(percentComplete.toFixed(4) + "%");
+            $("#load_progress").val(percentComplete.toFixed(1) + "%");
             // console.log(percentComplete);
         }
     };
@@ -357,6 +370,8 @@ function loading(event) {
             $("#time_bar").attr("max", snd.duration);
             $("#time_bar").on("input", dragTimeBar);
             $("#time_bar").on("change", releaseTimeBar);
+            $("#vol_bar").on("input", dragVolBar);
+            // $("#vol_bar").on("change", releaseVolBar);
             $(document).on('keyup', on_key_up);
         }, function() {});
     };
@@ -368,9 +383,17 @@ function loading(event) {
         success: function (data) {
             window.sheet_string = data;
             updateSheetByTime($("#g_sheet")[0], currentTime * 1000);
+            $("#speed").removeAttr("disabled");
+            $("#bpm_times_speed").removeAttr("disabled");
         },
         async: true
     });
+}
+
+function dragVolBar(e) {
+    var vol = +$("#vol_bar").val();
+    // window.source.gain.value = vol / 100;
+    window.gain_node.gain.value = vol / 100;
 }
 
 function dragTimeBar(e) {
@@ -398,6 +421,7 @@ function mousewheelAction(e) {
         stopping();
         startOffset = startOffset - delta / 1000;
         updateSheetByTime($("#g_sheet")[0], ((startOffset * music_speed) % snd.duration) * 1000);
+        $("#time_bar").val(startOffset);
         if (is_playing)
             playing();
         else
@@ -408,6 +432,7 @@ function mousewheelAction(e) {
         stopping();
         startOffset = startOffset - delta / 1000;
         updateSheetByTime($("#g_sheet")[0], ((startOffset * music_speed) % snd.duration) * 1000);
+        $("#time_bar").val(startOffset);
         if (is_playing)
             playing();
         else
@@ -438,6 +463,8 @@ function select_song(event) {
     $("#play").attr("disabled", "true");
     $("#stop").attr("disabled", "true");
     $("#load").removeAttr("disabled");
+    $("#bpm_times_speed").attr("disabled", "true");
+    $("#speed").attr("disabled", "true");
     $("#time").val("0");
     $("#time_bar").val("0.0");
 }
@@ -461,6 +488,30 @@ function on_key_up(e) {
     }
 }
 
+function reloadSheet() {
+    $("#g_sheet_measure").html("");
+    $("#g_sheet_short").html("");
+    $("#g_sheet_analog").html("");
+    $("#g_sheet_long").html("");
+    $("#g_bpm").html("");
+    bpm_list = [];
+    var c_time = +$("#time").val();
+    eval(sheet_string);
+    updateSheetByTime($("#g_sheet")[0], c_time * 1000);
+}
+
+function userUpdateBPMTimeSpeed(e) {
+    window.speed = +$("#bpm_times_speed").val() / window.bpm;
+    $("#speed").val(window.speed);
+    reloadSheet();
+}
+
+function userUpdateSpeed(e) {
+    window.speed = +$("#speed").val();
+    $("#bpm_times_speed").val(window.speed * window.bpm);
+    reloadSheet();
+}
+
 $(document).ready(function() {
     jQuery.fx.interval = 1;
 
@@ -474,6 +525,8 @@ $(document).ready(function() {
     $("#play").attr("disabled", "true");
     $("#stop").attr("disabled", "true");
     $("#load").removeAttr("disabled");
+    $("#bpm_times_speed").on("change", userUpdateBPMTimeSpeed);
+    $("#speed").on("change", userUpdateSpeed);
 
     $("#g_sheet").svg();
     $("#g_bpm").svg();
@@ -503,5 +556,5 @@ $(document).ready(function() {
 
     // Web Audio API
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
-    // context = new AudioContext();
+    context = new AudioContext();
 });
