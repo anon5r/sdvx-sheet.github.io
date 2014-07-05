@@ -440,8 +440,13 @@ function sheetStyleChange(e) {
     }
 }
 
+function searching(e) {
+    window.open("search.html", "SDVX 譜面搜尋", "toolbar=0, width=800, height=600");
+}
+
 var domActions = {
     initDomEvent: function (e) {
+        $("#search").on("click", searching);
         $("#load").on("click", loading);
         $("#play").on("click", playing);
         $("#stop").on("click", stopping);
@@ -453,7 +458,7 @@ var domActions = {
         $("#speed").on("change", userUpdateSpeed);
 
         $("#sdvx_style").on("change", sheetStyleChange);
-    },
+    }
 };
 
 function loadTickSound() {
@@ -483,6 +488,8 @@ function playTickSound() {
 
 $(document).ready(function () {
     window.domActions.initDomEvent();
+
+    initialMusicDBDOM();
 
     $("#play").attr("disabled", "true");
     $("#stop").attr("disabled", "true");
