@@ -1,5 +1,6 @@
 ﻿function ret_val(value) {
     $("#music", window.opener.document).val(value);
+    window.opener.select_song();
     window.close();
 }
 
@@ -9,7 +10,7 @@ function search(e) {
     var level_high = +$("#level_high").val();
 
     var music_db = window.opener.music_db;
-    var result = music_db({ title: { like: title }, level: { ">=": level_low, "<=": level_high } }).order("title").order("level");
+    var result = music_db({ title: { like: title }, level: { ">=": level_low, "<=": level_high } }).order("level asec, type asec, title asec");
     var result_html = "<p>" + result.count() + " songs found.</p>";
 
     result.each(function(entry) {
